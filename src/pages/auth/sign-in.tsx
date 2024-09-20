@@ -1,9 +1,11 @@
+import { signIn } from "@/api/sign-in";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useMutation } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -14,14 +16,35 @@ const signInForm = z.object({
 type SignInForm = z.infer<typeof signInForm>;
 
 export function SignIn() {
+  const [searchParams] = useSearchParams();
+
   const {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<SignInForm>();
+  } = useForm<SignInForm>({
+    defaultValues: {
+      email: searchParams.get("email") || "",
+    },
+  });
 
-  function handleSignIn(data: SignInForm) {
-    toast.success("Logado com sucesso! Redirecionando...");
+  const {
+    mutateAsync: authenticate,
+    failureReason,
+    error,
+  } = useMutation({
+    mutationFn: signIn,
+  });
+
+  async function handleSignIn(data: SignInForm) {
+    try {
+      await authenticate({ email: data.email });
+      toast.success("Autenticado com sucesso");
+    } catch {
+      toast.error("Erro ao logar", {
+        description: failureReason?.message || error?.message,
+      });
+    }
   }
 
   return (
